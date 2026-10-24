@@ -1,0 +1,28 @@
+services:
+  news-app:
+    container_name: news-app
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - news-app-network
+    volumes:
+      - ./out/logs:/out/logs
+     
+  nginx:
+    container_name: nginx
+    image: nginx:1.31-alpine
+    restart: unless-stopped
+    networks:
+      - news-app-network
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - news-app
+    
+networks:
+  news-app-network:
+    driver: bridge

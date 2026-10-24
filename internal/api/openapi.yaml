@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: News API
+  version: 1.0.0
+  description: |
+    Новости для фронта. Сейчас данные берутся из паблика VK spp_polytech
+    и обновляются раз в час. Будущий бэкенд новостей реализует этот же контракт.
+
+    Все ошибки приходят в формате `{"error": "..."}`. Текст ошибки на английском
+    и не предназначен для показа пользователю.
+servers:
+  - url: /
+    description: Прод, тот же домен, что у фронта (за общим nginx)
+  - url: http://localhost:8080
+    description: Локально
+
+# API публичное, авторизация не нужна.
+security: []
+
+paths:
+  /api/news:
+    get:
+      summary: Лента новостей
+      description: |
+        Новости от новых к старым. Реклама, репосты и посты без текста отфильтрованы.
+        Всего не больше 100 новостей. `offset` дальше конца не ошибка: придёт `items: []`.
+      operationId: getNews
+      parameters:
+        - name: limit
+          in: query
+          description: Сколько новостей вернуть. Значения больше 50 урезаются до 50.
+          schema: { type: integer, minimum: 1, default: 10 }
+        - name: offset
+          in: query
+          description: Сколько новостей пропустить.
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Страница ленты
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NewsList' }
+        '400':
+          description: '`invalid limit` или `invalid offset`'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: invalid limit }
+        '503': { $ref: '#/components/responses/NotLoaded' }
+
+  /api/news/{slug}:
+    get:
+      summary: Одна новость
+      description: |
+        `slug` — это `id` из ленты. Если пост отредактировали и slug поменялся,
+        старый slug всё равно найдёт новость (по номеру поста в конце),
+        а в ответе будет уже новый `id`.
+      operationId: getNewsBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+          example: den-otkrytykh-dverey-v-politekhe-512
+      responses:
+        '200':
+          description: Новость
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/News' }
+        '404':
+          description: Новости нет (удалена или старше 100 последних постов)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: news not found }
+        '503': { $ref: '#/components/responses/NotLoaded' }
+
+  /health:
+    get:
+      summary: Состояние сервиса
+      description: Для Docker и мониторинга, фронту не нужен.
+      operationId: health
+      responses:
+        '200':
+          description: Сервис жив
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, news_loaded]
+                properties:
+                  status: { type: string, example: ok }
+                  news_loaded: { type: boolean }
+                  updated_at:
+                    type: string
+                    format: date-time
+                    description: Нет, пока не было ни одной успешной загрузки
+
+components:
+  responses:
+    NotLoaded:
+      description: Сервис только что запустился и ещё не загрузил новости
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: news are not loaded yet }
+
+  schemas:
+    News:
+      type: object
+      required: [id, images, type, date, title, text]
+      properties:
+        id:
+          type: string
+          description: Slug, только `a-z`, `0-9`, `-`. Число в конце — номер поста.
+          example: den-otkrytykh-dverey-v-politekhe-512
+        images:
+          type: array
+          nullable: true
+          description: |
+            По одной ссылке на каждое фото (до 1080×1024, CDN VK).
+            Сейчас всегда массив, `[]` если фото нет.
+          items: { type: string, format: uri }
+          example: ['https://sun9-1.userapi.com/photo.jpg']
+        type:
+          type: string
+          enum: [Анонс мероприятия, Отчет о мероприятии, null]
+          nullable: true
+          description: Сейчас всегда `null`, в VK типов нет.
+          example: null
+        date:
+          type: string
+          format: date-time
+          description: Время публикации, UTC.
+          example: '2026-10-18T13:00:00Z'
+        title:
+          type: string
+          description: Первая строка поста, не длиннее ~103 символов.
+          example: День открытых дверей в Политехе!
+        text:
+          type: string
+          nullable: true
+          description: |
+            Обычный текст, не HTML, с переносами `\n`.
+            `null`, если кроме заголовка ничего нет.
+          example: Приходите 1 ноября.
+
+    NewsList:
+      type: object
+      required: [items, total, updated_at]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/News' }
+        total:
+          type: integer
+          description: Сколько новостей всего (для пагинации).
+          example: 92
+        updated_at:
+          type: string
+          format: date-time
+          description: Когда сервис последний раз успешно забрал новости, UTC.
+          example: '2026-10-18T13:05:00Z'
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
