@@ -89,7 +89,7 @@ func getDuration(key string, def time.Duration) (time.Duration, error) {
 }
 
 // loadDotEnv — минимальный загрузчик .env без сторонних библиотек.
-// Формат: KEY=VALUE, строки с # игнорируются.
+// Формат: KEY=VALUE
 // Уже заданные переменные окружения НЕ перезаписываются.
 func loadDotEnv(path string) {
 	f, err := os.Open(path)
@@ -110,9 +110,21 @@ func loadDotEnv(path string) {
 			continue
 		}
 		key = strings.TrimSpace(key)
-		val = strings.Trim(strings.TrimSpace(val), `"'`)
+		raw := val
+		val = strings.TrimSpace(val)
+
+		if len(val) >= 2 && (val[0] == '"' || val[0] == '\'') && val[len(val)-1] == val[0] {
+			val = val[1 : len(val)-1]
+		} else {
+			val, _, _ = strings.Cut(raw, " #")
+			val = strings.TrimSpace(val)
+		}
+
 		if _, exists := os.LookupEnv(key); !exists {
 			os.Setenv(key, val)
 		}
+	}
+	if err := sc.Err(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: reading %s: %v\n", path, err)
 	}
 }
