@@ -20,6 +20,7 @@ type Config struct {
 	RefreshInterval time.Duration // как часто обновлять новости
 	RetryInterval   time.Duration // через сколько повторить, если VK не ответил
 	CORSOrigin      string        // адрес фронта, если он на другом домене/порту (иначе пусто)
+	LogFile         string        // файл, куда дублировать логи (иначе только stdout)
 }
 
 func Load() (Config, error) {
@@ -31,6 +32,7 @@ func Load() (Config, error) {
 		VKGroup:      getEnv("VK_GROUP", "spp_polytech"),
 		VKAPIVersion: getEnv("VK_API_VERSION", "5.199"),
 		CORSOrigin:   os.Getenv("CORS_ORIGIN"),
+		LogFile:      os.Getenv("LOG_FILE"),
 	}
 
 	var err error

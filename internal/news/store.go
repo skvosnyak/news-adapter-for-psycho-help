@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-// Store хранит последние загруженные новости в памяти.
-// HTTP-запросы читают отсюда, поэтому VK не дёргается на каждый заход на сайт.
-//
-// RWMutex нужен потому, что в Go каждый HTTP-запрос обрабатывается
-// в своей горутине: читать могут многие одновременно, а писать (раз в час)
-// — только один, и в этот момент чтение ждёт.
 type Store struct {
 	mu         sync.RWMutex
 	items      []News
@@ -19,13 +13,10 @@ type Store struct {
 	updatedAt  time.Time
 }
 
-// NewStore создаёт пустое хранилище.
 func NewStore() *Store {
 	return &Store{items: []News{}, bySlug: map[string]News{}, bySourceID: map[int]News{}}
 }
 
-// Replace целиком заменяет набор новостей свежим.
-// Индексы собираются до блокировки, чтобы держать lock минимально.
 func (s *Store) Replace(items []News) {
 	if items == nil {
 		items = []News{}

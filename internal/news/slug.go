@@ -7,7 +7,6 @@ import (
 
 const maxSlugBaseRunes = 60
 
-// translit — простая транслитерация кириллицы для URL.
 var translit = map[rune]string{
 	'а': "a", 'б': "b", 'в': "v", 'г': "g", 'д': "d", 'е': "e", 'ё': "e",
 	'ж': "zh", 'з': "z", 'и': "i", 'й': "y", 'к': "k", 'л': "l", 'м': "m",
@@ -17,11 +16,7 @@ var translit = map[rune]string{
 }
 
 // Slugify делает из заголовка и номера поста человекочитаемый id для URL:
-// "День открытых дверей 2026!" + 512 → "den-otkrytykh-dverey-2026-512".
-//
 // Номер в конце гарантирует уникальность (заголовки могут совпадать)
-// и позволяет найти новость, даже если текст поста отредактировали
-// и slug из-за этого поменялся (см. SourceIDFromSlug).
 func Slugify(title string, sourceID int) string {
 	var b strings.Builder
 	dash := false
