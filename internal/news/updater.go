@@ -16,8 +16,20 @@ type Updater struct {
 }
 
 // NewUpdater связывает источник и хранилище.
-func NewUpdater(src Source, store *Store, interval, retry time.Duration, log *slog.Logger) *Updater {
-	return &Updater{source: src, store: store, interval: interval, retry: retry, log: log}
+func NewUpdater(
+	src Source,
+	store *Store,
+	interval,
+	retry time.Duration,
+	log *slog.Logger,
+) *Updater {
+	return &Updater{
+		source:   src,
+		store:    store,
+		interval: interval,
+		retry:    retry,
+		log:      log,
+	}
 }
 
 // Run — бесконечный цикл обновления; запускается в отдельной горутине.

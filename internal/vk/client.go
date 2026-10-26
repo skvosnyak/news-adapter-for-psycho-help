@@ -29,7 +29,12 @@ type Client struct {
 }
 
 // NewClient создаёт клиента с таймаутом на запрос.
-func NewClient(token, version, group string, count int) *Client {
+func NewClient(
+	token,
+	version,
+	group string,
+	count int,
+) *Client {
 	return &Client{
 		BaseURL: defaultBaseURL,
 		token:   token,
@@ -49,18 +54,60 @@ func (c *Client) Fetch(ctx context.Context) ([]news.News, error) {
 	return ToNews(posts), nil
 }
 
+// maxPageSize — больше 100 постов за один вызов wall.get VK не отдаёт.
+const maxPageSize = 100
+
 // WallGet вызывает метод VK wall.get и возвращает сырые посты.
+func (c *Client) WallGet(ctx context.Context) ([]Post, error) {
+	page, err := c.wallGetPage(ctx, 0, c.count)
+	if err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}
+
+// WallGetAll выкачивает всю стену постранично, по 100 постов.
+// Закреплённый пост VK отдаёт только на первой странице, но дубли
+// на всякий случай отбрасываются по id.
+func (c *Client) WallGetAll(ctx context.Context) ([]Post, error) {
+	var all []Post
+	seen := map[int]bool{}
+	for offset := 0; ; offset += maxPageSize {
+		page, err := c.wallGetPage(ctx, offset, maxPageSize)
+		if err != nil {
+			return nil, fmt.Errorf("offset %d: %w", offset, err)
+		}
+		for _, p := range page.Items {
+			if !seen[p.ID] {
+				seen[p.ID] = true
+				all = append(all, p)
+			}
+		}
+		if len(page.Items) == 0 || offset+maxPageSize >= page.Count {
+			return all, nil
+		}
+		// Лимит VK для сервисного ключа — несколько запросов в секунду.
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(400 * time.Millisecond):
+		}
+	}
+}
+
+// wallGetPage запрашивает одну страницу wall.get.
 //
 // Параметры отправляются POST-формой, а не в URL: так токен не попадёт
 // в текст ошибки (net/http пишет URL в ошибку) и в логи прокси.
-func (c *Client) WallGet(ctx context.Context) ([]Post, error) {
+func (c *Client) wallGetPage(ctx context.Context, offset, count int) (*wallResponse, error) {
 	form := url.Values{}
 	if _, err := strconv.Atoi(c.group); err == nil {
 		form.Set("owner_id", c.group) // числовой id, у сообществ он со знаком минус
 	} else {
 		form.Set("domain", c.group) // короткое имя, например "polytech"
 	}
-	form.Set("count", strconv.Itoa(c.count))
+	form.Set("offset", strconv.Itoa(offset))
+	form.Set("count", strconv.Itoa(count))
 	form.Set("filter", "owner") // только посты самого сообщества
 	form.Set("access_token", c.token)
 	form.Set("v", c.version)
@@ -93,5 +140,5 @@ func (c *Client) WallGet(ctx context.Context) ([]Post, error) {
 	if body.Response == nil {
 		return nil, errors.New("vk: empty response")
 	}
-	return body.Response.Items, nil
+	return body.Response, nil
 }

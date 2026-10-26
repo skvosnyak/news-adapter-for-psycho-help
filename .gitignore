@@ -1,3 +1,5 @@
 .env
 news-service
 news-service.exe
+store/news.json
+out/

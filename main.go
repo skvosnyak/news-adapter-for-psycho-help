@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,8 +19,6 @@ import (
 	"news-service/internal/vk"
 )
 
-// main только собирает части вместе: конфиг → VK-клиент → хранилище →
-// фоновое обновление → HTTP-сервер, и аккуратно всё останавливает.
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -29,7 +28,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	// ctx отменится по Ctrl+C или по SIGTERM (так Docker останавливает контейнер).
+	if cfg.LogFile != "" {
+		f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			logger.Error("log file error", "err", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		logger = slog.New(slog.NewTextHandler(io.MultiWriter(os.Stdout, f), nil))
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -47,7 +55,6 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	// Плавная остановка: дождаться текущих запросов, потом выйти.
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
