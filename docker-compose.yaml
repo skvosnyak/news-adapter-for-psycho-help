@@ -7,10 +7,12 @@ services:
       - .env
     environment:
       LOG_FILE: /out/logs/news-service.log
+      STORE_FILE: /store/news.json
     networks:
       - news-app-network
     volumes:
       - ./out/logs:/out/logs
+      - ./store:/store
      
   nginx:
     container_name: nginx
