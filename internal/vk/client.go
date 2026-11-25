@@ -24,7 +24,6 @@ type Client struct {
 	token   string
 	version string
 	group   string
-	count   int
 	http    *http.Client
 }
 
@@ -33,21 +32,24 @@ func NewClient(
 	token,
 	version,
 	group string,
-	count int,
 ) *Client {
 	return &Client{
 		BaseURL: defaultBaseURL,
 		token:   token,
 		version: version,
 		group:   group,
-		count:   count,
 		http:    &http.Client{Timeout: 15 * time.Second},
 	}
 }
 
-// Fetch — точка входа для Updater: получить посты и перевести их в новости.
-func (c *Client) Fetch(ctx context.Context) ([]news.News, error) {
-	posts, err := c.WallGet(ctx)
+// Fetch — точка входа для Updater: получить все посты и перевести их в новости.
+func (c *Client) Fetch(
+	ctx context.Context,
+) (
+	[]news.News,
+	error,
+) {
+	posts, err := c.WallGetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,19 +59,15 @@ func (c *Client) Fetch(ctx context.Context) ([]news.News, error) {
 // maxPageSize — больше 100 постов за один вызов wall.get VK не отдаёт.
 const maxPageSize = 100
 
-// WallGet вызывает метод VK wall.get и возвращает сырые посты.
-func (c *Client) WallGet(ctx context.Context) ([]Post, error) {
-	page, err := c.wallGetPage(ctx, 0, c.count)
-	if err != nil {
-		return nil, err
-	}
-	return page.Items, nil
-}
-
 // WallGetAll выкачивает всю стену постранично, по 100 постов.
 // Закреплённый пост VK отдаёт только на первой странице, но дубли
 // на всякий случай отбрасываются по id.
-func (c *Client) WallGetAll(ctx context.Context) ([]Post, error) {
+func (c *Client) WallGetAll(
+	ctx context.Context,
+) (
+	[]Post,
+	error,
+) {
 	var all []Post
 	seen := map[int]bool{}
 	for offset := 0; ; offset += maxPageSize {
@@ -99,7 +97,14 @@ func (c *Client) WallGetAll(ctx context.Context) ([]Post, error) {
 //
 // Параметры отправляются POST-формой, а не в URL: так токен не попадёт
 // в текст ошибки (net/http пишет URL в ошибку) и в логи прокси.
-func (c *Client) wallGetPage(ctx context.Context, offset, count int) (*wallResponse, error) {
+func (c *Client) wallGetPage(
+	ctx context.Context,
+	offset,
+	count int,
+) (
+	*wallResponse,
+	error,
+) {
 	form := url.Values{}
 	if _, err := strconv.Atoi(c.group); err == nil {
 		form.Set("owner_id", c.group) // числовой id, у сообществ он со знаком минус

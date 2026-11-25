@@ -42,8 +42,8 @@ func main() {
 	defer stop()
 
 	store := news.NewStore()
-	source := vk.NewClient(cfg.VKToken, cfg.VKAPIVersion, cfg.VKGroup, cfg.VKPostsCount)
-	updater := news.NewUpdater(source, store, cfg.RefreshInterval, cfg.RetryInterval, logger)
+	source := vk.NewClient(cfg.VKToken, cfg.VKAPIVersion, cfg.VKGroup)
+	updater := news.NewUpdater(source, store, cfg.StoreFile, cfg.RefreshInterval, cfg.RetryInterval, logger)
 	go updater.Run(ctx)
 
 	srv := &http.Server{

@@ -19,7 +19,9 @@ var mentionRe = regexp.MustCompile(`\[(?:id|club|public)\d+\|([^\]]+)\]`)
 // Отбрасывает рекламу, репосты и посты без текста (без текста нечего ставить
 // в заголовок), сортирует от новых к старым — закреплённый пост VK ставит
 // первым, даже если он старый.
-func ToNews(posts []Post) []news.News {
+func ToNews(
+	posts []Post,
+) []news.News {
 	result := make([]news.News, 0, len(posts))
 	for _, p := range posts {
 		if p.MarkedAsAds == 1 || len(p.CopyHistory) > 0 {
@@ -31,14 +33,22 @@ func ToNews(posts []Post) []news.News {
 		}
 		result = append(result, n)
 	}
-	sort.SliceStable(result, func(i, j int) bool {
+	sort.SliceStable(result, func(
+		i,
+		j int,
+	) bool {
 		return result[i].Date.After(result[j].Date)
 	})
 	return result
 }
 
 // convertPost переводит один пост. ok=false — пост без текста, пропускаем.
-func convertPost(p Post) (news.News, bool) {
+func convertPost(
+	p Post,
+) (
+	news.News,
+	bool,
+) {
 	text := strings.TrimSpace(mentionRe.ReplaceAllString(p.Text, "$1"))
 	if text == "" {
 		return news.News{}, false
@@ -63,7 +73,12 @@ func convertPost(p Post) (news.News, bool) {
 //     text = весь текст целиком (чтобы ничего не потерялось).
 //
 // text = nil, если после заголовка ничего не осталось.
-func splitTitle(text string) (string, *string) {
+func splitTitle(
+	text string,
+) (
+	string,
+	*string,
+) {
 	firstLine, rest, _ := strings.Cut(text, "\n")
 	firstLine = strings.TrimSpace(firstLine)
 
@@ -82,7 +97,10 @@ func splitTitle(text string) (string, *string) {
 
 // truncateWords обрезает строку до n символов (именно символов-рун, а не байт:
 // кириллическая буква в UTF-8 занимает 2 байта) и старается не резать слово.
-func truncateWords(s string, n int) string {
+func truncateWords(
+	s string,
+	n int,
+) string {
 	r := []rune(s)
 	if len(r) <= n {
 		return s
@@ -115,7 +133,9 @@ var croppedSizes = map[string]bool{"o": true, "p": true, "q": true, "r": true}
 
 // photoURLs возвращает по одной ссылке на каждое фото поста.
 // Пустой срез, а не nil, чтобы в JSON было [], а не null.
-func photoURLs(atts []Attachment) []string {
+func photoURLs(
+	atts []Attachment,
+) []string {
 	urls := []string{}
 	for _, a := range atts {
 		if a.Type != "photo" || a.Photo == nil {
@@ -130,7 +150,9 @@ func photoURLs(atts []Attachment) []string {
 
 // pickPhotoSize выбирает одну копию фото: сначала по приоритету типов,
 // а если VK прислал незнакомые типы — самую большую необрезанную.
-func pickPhotoSize(sizes []PhotoSize) string {
+func pickPhotoSize(
+	sizes []PhotoSize,
+) string {
 	byType := make(map[string]string, len(sizes))
 	for _, s := range sizes {
 		byType[s.Type] = s.URL

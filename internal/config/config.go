@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -16,14 +15,17 @@ type Config struct {
 	VKToken         string        // сервисный ключ приложения VK
 	VKGroup         string        // короткое имя паблика (domain) или его id со знаком минус
 	VKAPIVersion    string        // версия VK API
-	VKPostsCount    int           // сколько последних постов забирать (максимум 100)
 	RefreshInterval time.Duration // как часто обновлять новости
 	RetryInterval   time.Duration // через сколько повторить, если VK не ответил
 	CORSOrigin      string        // адрес фронта, если он на другом домене/порту (иначе пусто)
 	LogFile         string        // файл, куда дублировать логи (иначе только stdout)
+	StoreFile       string        // файл с сохранёнными новостями (иначе только память)
 }
 
-func Load() (Config, error) {
+func Load() (
+	Config,
+	error,
+) {
 	loadDotEnv(".env")
 
 	cfg := Config{
@@ -33,12 +35,10 @@ func Load() (Config, error) {
 		VKAPIVersion: getEnv("VK_API_VERSION", "5.199"),
 		CORSOrigin:   os.Getenv("CORS_ORIGIN"),
 		LogFile:      os.Getenv("LOG_FILE"),
+		StoreFile:    getEnv("STORE_FILE", "store/news.json"),
 	}
 
 	var err error
-	if cfg.VKPostsCount, err = getInt("VK_POSTS_COUNT", 100); err != nil {
-		return Config{}, err
-	}
 	if cfg.RefreshInterval, err = getDuration("REFRESH_INTERVAL", time.Hour); err != nil {
 		return Config{}, err
 	}
@@ -49,33 +49,27 @@ func Load() (Config, error) {
 	if cfg.VKToken == "" {
 		return Config{}, errors.New("VK_SERVICE_TOKEN is required")
 	}
-	if cfg.VKPostsCount < 1 || cfg.VKPostsCount > 100 {
-		return Config{}, errors.New("VK_POSTS_COUNT must be between 1 and 100")
-	}
 	return cfg, nil
 }
 
-func getEnv(key, def string) string {
+func getEnv(
+	key,
+	def string,
+) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
 	return def
 }
 
-func getInt(key string, def int) (int, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return def, nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return 0, fmt.Errorf("%s: %w", key, err)
-	}
-	return n, nil
-}
-
 // getDuration читает длительность вида "1h", "3h", "30m".
-func getDuration(key string, def time.Duration) (time.Duration, error) {
+func getDuration(
+	key string,
+	def time.Duration,
+) (
+	time.Duration,
+	error,
+) {
 	v := os.Getenv(key)
 	if v == "" {
 		return def, nil
@@ -93,7 +87,9 @@ func getDuration(key string, def time.Duration) (time.Duration, error) {
 // loadDotEnv — минимальный загрузчик .env без сторонних библиотек.
 // Формат: KEY=VALUE
 // Уже заданные переменные окружения НЕ перезаписываются.
-func loadDotEnv(path string) {
+func loadDotEnv(
+	path string,
+) {
 	f, err := os.Open(path)
 	if err != nil {
 		return

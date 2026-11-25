@@ -17,7 +17,10 @@ var translit = map[rune]string{
 
 // Slugify делает из заголовка и номера поста человекочитаемый id для URL:
 // Номер в конце гарантирует уникальность (заголовки могут совпадать)
-func Slugify(title string, sourceID int) string {
+func Slugify(
+	title string,
+	sourceID int,
+) string {
 	var b strings.Builder
 	dash := false
 	for _, r := range strings.ToLower(title) {
@@ -50,7 +53,12 @@ func Slugify(title string, sourceID int) string {
 }
 
 // SourceIDFromSlug достаёт номер поста из конца slug'а ("...-512" → 512).
-func SourceIDFromSlug(slug string) (int, bool) {
+func SourceIDFromSlug(
+	slug string,
+) (
+	int,
+	bool,
+) {
 	tail := slug
 	if i := strings.LastIndexByte(slug, '-'); i >= 0 {
 		tail = slug[i+1:]

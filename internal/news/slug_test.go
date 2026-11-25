@@ -5,7 +5,9 @@ import (
 	"testing"
 )
 
-func TestSlugify(t *testing.T) {
+func TestSlugify(
+	t *testing.T,
+) {
 	cases := map[string]string{
 		"День открытых дверей 2026!": "den-otkrytykh-dverey-2026-512",
 		"📢 Анонс: хакатон «CTF»":     "anons-khakaton-ctf-512",
@@ -22,7 +24,9 @@ func TestSlugify(t *testing.T) {
 	}
 }
 
-func TestStoreGetFallsBackToSourceID(t *testing.T) {
+func TestStoreGetFallsBackToSourceID(
+	t *testing.T,
+) {
 	s := NewStore()
 	s.Replace([]News{{ID: "novyy-zagolovok-7", SourceID: 7}})
 	if _, ok := s.Get("novyy-zagolovok-7"); !ok {
