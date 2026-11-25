@@ -9,7 +9,9 @@ import (
 	"news-service/internal/news"
 )
 
-func TestListPaginationAndNotReady(t *testing.T) {
+func TestListPaginationAndNotReady(
+	t *testing.T,
+) {
 	store := news.NewStore()
 	router := NewRouter(store, "")
 
@@ -38,7 +40,9 @@ func TestListPaginationAndNotReady(t *testing.T) {
 	}
 }
 
-func TestGetBySlug(t *testing.T) {
+func TestGetBySlug(
+	t *testing.T,
+) {
 	store := news.NewStore()
 	store.Replace([]news.News{{ID: "khakaton-7", SourceID: 7, Title: "x"}})
 	router := NewRouter(store, "")

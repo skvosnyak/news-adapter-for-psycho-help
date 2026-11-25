@@ -19,5 +19,10 @@ type News struct {
 }
 
 type Source interface {
-	Fetch(ctx context.Context) ([]News, error)
+	Fetch(
+		ctx context.Context,
+	) (
+		[]News,
+		error,
+	)
 }

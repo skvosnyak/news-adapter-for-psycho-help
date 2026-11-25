@@ -96,6 +96,13 @@ paths:
                     type: string
                     format: date-time
                     description: Нет, пока не было ни одной успешной загрузки
+                  last_sync_at:
+                    type: string
+                    format: date-time
+                    description: Время завершения последней попытки синхронизации
+                  last_sync_error:
+                    type: string
+                    description: Ошибка последней попытки синхронизации, если она завершилась неудачно
 
 components:
   responses:

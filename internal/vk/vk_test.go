@@ -26,21 +26,29 @@ const sampleWall = `{"response":{"count":5,"items":[
  {"id":7,"owner_id":-42,"date":1760000200,"text":"Репост","copy_history":[{"id":1}]}
 ]}}`
 
-func newTestClient(t *testing.T, body string) *Client {
+func newTestClient(
+	t *testing.T,
+	body string,
+) *Client {
 	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(
+		w http.ResponseWriter,
+		r *http.Request,
+	) {
 		if err := r.ParseForm(); err != nil || r.PostForm.Get("access_token") != "secret" {
 			t.Errorf("token must be sent in POST form")
 		}
 		w.Write([]byte(body))
 	}))
 	t.Cleanup(srv.Close)
-	c := NewClient("secret", "5.199", "spp_polytech", 100)
+	c := NewClient("secret", "5.199", "spp_polytech")
 	c.BaseURL = srv.URL
 	return c
 }
 
-func TestFetchConvertsAndFilters(t *testing.T) {
+func TestFetchConvertsAndFilters(
+	t *testing.T,
+) {
 	items, err := newTestClient(t, sampleWall).Fetch(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +76,9 @@ func TestFetchConvertsAndFilters(t *testing.T) {
 	}
 }
 
-func TestVKErrorWith200(t *testing.T) {
+func TestVKErrorWith200(
+	t *testing.T,
+) {
 	c := newTestClient(t, `{"error":{"error_code":5,"error_msg":"User authorization failed"}}`)
 	_, err := c.Fetch(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "User authorization failed") {
@@ -76,7 +86,9 @@ func TestVKErrorWith200(t *testing.T) {
 	}
 }
 
-func TestLongFirstLineBecomesTruncatedTitle(t *testing.T) {
+func TestLongFirstLineBecomesTruncatedTitle(
+	t *testing.T,
+) {
 	long := strings.Repeat("слово ", 40) // 240 символов, одна строка
 	n, _ := convertPost(Post{ID: 1, Text: long})
 	if !strings.HasSuffix(n.Title, "слово...") || len([]rune(n.Title)) > maxTitleRunes+3 {
